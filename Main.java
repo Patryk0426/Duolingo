@@ -1,4 +1,6 @@
 public class Main {
-    SelectLanguage asd = new SelectLanguage();
-        asd.selectLanguage();
+    public static void main(String[] args) {1
+        SelectLanguage selectLanguage = new SelectLanguage();
+        selectLanguage.selectLanguage();
+    }
 }
