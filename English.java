@@ -1,5 +1,10 @@
-public class English {
-    public static void asd(String[] args) {
-        System.out.println("Hello World");
+class English extends Language {
+    public English() {
+        super("Angielski");
+    }
+
+    @Override
+    public void learn() {
+        System.out.println("Nauka angielskiego: zapoznaj się z podstawami gramatyki.");
     }
 }
