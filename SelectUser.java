@@ -3,10 +3,13 @@ import java.util.Scanner;
 
 public class SelectUser {
 
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/duolingo"; // Adres bazy danych
-    private static final String DB_USER = "root"; // Użytkownik bazy danych
-    private static final String DB_PASSWORD = ""; // Hasło do bazy danych
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/duolingo";
+    private static final String DB_USER = "root";
+    private static final String DB_PASSWORD = "";
 
+    /**.
+     *
+     */
     public static void select() {
         System.out.println("1. Zaloguj się");
         System.out.println("2. Utwórz konto");
@@ -48,8 +51,11 @@ public class SelectUser {
         }
     }
 
+    /**.
+     *
+     * @param user
+     */
     public static void createAccount(User user) {
-        // Tworzenie zapytania SQL
         String sql = "INSERT INTO users (name, login, password, type) VALUES ('" + user.name + "', '"
                 + user.login + "', '" + user.password + "', " + user.type.getValue() + ")";
 
@@ -67,8 +73,12 @@ public class SelectUser {
         }
     }
 
+    /**.
+     *
+     * @param login
+     * @param password
+     */
     public static void loginUser(String login, String password) {
-        // Tworzenie zapytania SQL do sprawdzania danych użytkownika
         String sql = "SELECT * FROM users WHERE login = '" + login + "' AND password = '" + password + "'";
 
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
@@ -92,3 +102,4 @@ public class SelectUser {
         }
     }
 }
+

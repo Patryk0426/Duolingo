@@ -1,8 +1,13 @@
-import java.sql.*;
-import java.util.Random;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Scanner;
 
-class English extends Language {
+public class English extends Language {
+
     private static final String DB_URL = "jdbc:mysql://localhost:3306/duolingo";
     private static final String DB_USER = "root";
     private static final String DB_PASSWORD = "";
@@ -12,138 +17,108 @@ class English extends Language {
     }
 
     @Override
+    /**.
+     *
+     */
     public void learn() {
-        System.out.println("Nauka angielskiego: Odpowiedz na poniższe pytania.");
-        Question[] questions = loadQuestionsFromDatabase();
-        if (questions == null || questions.length == 0) {
-            System.out.println("Brak pytań w bazie danych.");
-            return;
-        }
-
+        System.out.println("Nauka angielskiego: Zapoznaj się z podstawami gramatyki.");
         Scanner scanner = new Scanner(System.in);
+        int correctAnswers = 0;
 
-        // Wyświetlanie pytań i weryfikacja odpowiedzi
-        for (Question question : questions) {
-            if (question == null) continue;
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+            String questionQuery = "SELECT * FROM questions WHERE id_stage = 1 AND id_language = 1";
+            Statement questionStatement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            ResultSet questionResultSet = questionStatement.executeQuery(questionQuery);
 
-            System.out.println("\nPytanie: " + question.getText());
-            String[] answers = question.getAnswers();
-            for (int i = 0; i < answers.length; i++) {
-                System.out.println((i + 1) + ". " + answers[i]);
-            }
-
-            System.out.print("Wybierz numer odpowiedzi: ");
-            int userChoice = scanner.nextInt();
-
-            // Weryfikacja poprawności odpowiedzi
-            if (answers[userChoice - 1].equals(question.getCorrectAnswer())) {
-                System.out.println("Poprawna odpowiedź!");
-            } else {
-                System.out.println("Niepoprawna odpowiedź. Poprawna odpowiedź to: " + question.getCorrectAnswer());
-            }
-        }
-    }
-
-    private Question[] loadQuestionsFromDatabase() {
-        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
-             Statement questionStatement = connection.createStatement();
-             Statement allAnswersStatement = connection.createStatement()) {
-
-            // Pobieranie pytań i odpowiedzi dla języka angielskiego
-            String questionSql = "SELECT q.id_question, q.question, a.answer " +
-                    "FROM questions q " +
-                    "JOIN answers a ON q.id_question = a.id_question " +
-                    "WHERE q.id_language = 1";
-            ResultSet questionResultSet = questionStatement.executeQuery(questionSql);
-
-            // Pobieranie wszystkich odpowiedzi z bazy danych
-            String allAnswersSql = "SELECT answer FROM answers";
-            ResultSet allAnswersResultSet = allAnswersStatement.executeQuery(allAnswersSql);
-
-            // Pobranie wszystkich odpowiedzi do tablicy
-            String[] allAnswers = getAnswersArray(allAnswersResultSet);
-
-            // Tworzenie pytań
-            Question[] questions = new Question[10]; // Maks. 10 pytań
-            int index = 0;
-
-            while (questionResultSet.next() && index < questions.length) {
+            while (questionResultSet.next()) {
                 int questionId = questionResultSet.getInt("id_question");
                 String questionText = questionResultSet.getString("question");
-                String correctAnswer = questionResultSet.getString("answer");
+                String correctAnswerQuery = "SELECT answer FROM answers WHERE id_question = ?";
+                PreparedStatement correctAnswerStatement = connection.prepareStatement(correctAnswerQuery);
+                correctAnswerStatement.setInt(1, questionId);
+                ResultSet correctAnswerResultSet = correctAnswerStatement.executeQuery();
 
-                // Wybór trzech losowych odpowiedzi
-                String[] randomAnswers = getRandomAnswers(allAnswers, correctAnswer);
+                String correctAnswer = null;
+                if (correctAnswerResultSet.next()) {
+                    correctAnswer = correctAnswerResultSet.getString("answer");
+                }
 
-                // Dodanie poprawnej odpowiedzi do zestawu
-                String[] answers = new String[4];
-                answers[0] = correctAnswer; // Dodanie poprawnej odpowiedzi
-                System.arraycopy(randomAnswers, 0, answers, 1, 3); // Kopiowanie trzech losowych
+                String randomAnswersQuery = "SELECT answer FROM answers WHERE id_question != ? ORDER BY RAND() LIMIT 3";
+                PreparedStatement randomAnswersStatement = connection.prepareStatement(randomAnswersQuery);
+                randomAnswersStatement.setInt(1, questionId);
+                ResultSet randomAnswersResultSet = randomAnswersStatement.executeQuery();
 
-                // Losowanie kolejności odpowiedzi
-                shuffleArray(answers);
+                String[] answers = getAnswersArray(correctAnswer, randomAnswersResultSet);
 
-                // Tworzenie pytania
-                questions[index++] = new Question(questionId, questionText, correctAnswer, answers);
+                System.out.println("Pytanie: " + questionText);
+                for (int i = 0; i < answers.length; i++) {
+                    System.out.println((i + 1) + ". " + answers[i]);
+                }
+
+                System.out.print("Wybierz poprawną odpowiedź (1-4): ");
+                int userChoice = scanner.nextInt();
+
+                if (answers[userChoice - 1].equals(correctAnswer)) {
+                    System.out.println("Poprawna odpowiedź!");
+                    correctAnswers++;
+                } else {
+                    System.out.println("Błędna odpowiedź. Poprawna odpowiedź to: " + correctAnswer);
+                }
+
+
             }
 
-            return questions;
+            // Sprawdź, czy użytkownik powinien przejść na kolejny poziom
+            if (correctAnswers >= 7) {
+                System.out.println("Gratulacje! Przeszedłeś na etap 2.");
+                // Tu można dodać logikę dla zmiany stage
+            } else {
+                System.out.println("Musisz odpowiedzieć poprawnie na co najmniej 7 pytań, aby przejść na kolejny poziom.");
+            }
 
         } catch (SQLException e) {
-            System.err.println("Błąd podczas ładowania pytań z bazy danych: " + e.getMessage());
-            return null;
+            System.err.println("Błąd podczas nauki angielskiego: " + e.getMessage());
         }
     }
 
-    private String[] getAnswersArray(ResultSet resultSet) throws SQLException {
-        resultSet.last(); // Przejdź na ostatni wiersz, aby policzyć wiersze
-        int size = resultSet.getRow();
-        resultSet.beforeFirst(); // Wróć na początek
+    /**.
+     *
+     * @param correctAnswer
+     * @param randomAnswersResultSet
+     * @throws SQLException
+     */
+    public String[] getAnswersArray(String correctAnswer, ResultSet randomAnswersResultSet) throws SQLException {
+        // Utwórz tablicę odpowiedzi
+        String[] answers = new String[4];
+        answers[0] = correctAnswer;
 
-        String[] answers = new String[size];
-        int index = 0;
-
-        while (resultSet.next()) {
-            answers[index++] = resultSet.getString("answer");
+        int index = 1;
+        while (randomAnswersResultSet.next() && index < 4) {
+            answers[index] = randomAnswersResultSet.getString("answer");
+            index++;
         }
 
+        // Jeśli mniej niż 3 losowe odpowiedzi, uzupełnij brakujące wartości pustymi
+        while (index < 4) {
+            answers[index] = "Brak odpowiedzi";
+            index++;
+        }
+
+        // Wymieszaj odpowiedzi w tablicy
+        shuffleArray(answers);
         return answers;
     }
 
-    private String[] getRandomAnswers(String[] allAnswers, String correctAnswer) {
-        Random random = new Random();
-        String[] randomAnswers = new String[3];
-        int count = 0;
-
-        while (count < 3) {
-            int randomIndex = random.nextInt(allAnswers.length);
-            String randomAnswer = allAnswers[randomIndex];
-
-            // Upewnij się, że odpowiedź nie jest poprawna i nie została już wybrana
-            if (!randomAnswer.equals(correctAnswer) && !isAnswerAlreadySelected(randomAnswers, randomAnswer)) {
-                randomAnswers[count++] = randomAnswer;
-            }
-        }
-
-        return randomAnswers;
-    }
-
-    private boolean isAnswerAlreadySelected(String[] selectedAnswers, String answer) {
-        for (String selected : selectedAnswers) {
-            if (selected != null && selected.equals(answer)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
+    /**.
+     *
+     * @param array
+     */
     private void shuffleArray(String[] array) {
-        Random random = new Random();
         for (int i = array.length - 1; i > 0; i--) {
-            int index = random.nextInt(i + 1);
-            String temp = array[index];
-            array[index] = array[i];
-            array[i] = temp;
+            int j = (int) (Math.random() * (i + 1));
+            String temp = array[i];
+            array[i] = array[j];
+            array[j] = temp;
         }
     }
 }
