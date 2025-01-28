@@ -30,7 +30,6 @@ public class SelectLanguage {
                 return;
         }
 
-        // Wywołanie metody learn() na obiekcie typu Language
         System.out.println("Wybrany język: " + selectedLanguage);
         selectedLanguage.learn();
     }
