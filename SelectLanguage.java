@@ -1,6 +1,9 @@
 import java.util.Scanner;
 
 public class SelectLanguage {
+    /**.
+     *
+     */
     public void selectLanguage() {
         Scanner sc = new Scanner(System.in);
 
