@@ -136,7 +136,7 @@ class English extends Language {
         }
         return false;
     }
-
+//ea
     private void shuffleArray(String[] array) {
         Random random = new Random();
         for (int i = array.length - 1; i > 0; i--) {

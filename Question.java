@@ -22,7 +22,7 @@ public class Question {
     public String[] getAnswers() {
         return answers;
     }
-
+//getid
     public int getId() {
         return id;
     }
