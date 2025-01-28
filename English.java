@@ -1,7 +1,5 @@
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 
 class English extends Language {
@@ -16,8 +14,8 @@ class English extends Language {
     @Override
     public void learn() {
         System.out.println("Nauka angielskiego: Odpowiedz na poniższe pytania.");
-        List<Questions> questions = loadQuestionsFromDatabase();
-        if (questions.isEmpty()) {
+        Question[] questions = loadQuestionsFromDatabase();
+        if (questions == null || questions.length == 0) {
             System.out.println("Brak pytań w bazie danych.");
             return;
         }
@@ -25,18 +23,20 @@ class English extends Language {
         Scanner scanner = new Scanner(System.in);
 
         // Wyświetlanie pytań i weryfikacja odpowiedzi
-        for (Questions question : questions) {
-            System.out.println("\nPytanie: " + question.getQuestion());
-            List<String> answers = question.getAnswers();
-            for (int i = 0; i < answers.size(); i++) {
-                System.out.println((i + 1) + ". " + answers.get(i));
+        for (Question question : questions) {
+            if (question == null) continue;
+
+            System.out.println("\nPytanie: " + question.getText());
+            String[] answers = question.getAnswers();
+            for (int i = 0; i < answers.length; i++) {
+                System.out.println((i + 1) + ". " + answers[i]);
             }
 
             System.out.print("Wybierz numer odpowiedzi: ");
             int userChoice = scanner.nextInt();
 
             // Weryfikacja poprawności odpowiedzi
-            if (answers.get(userChoice - 1).equals(question.getCorrectAnswer())) {
+            if (answers[userChoice - 1].equals(question.getCorrectAnswer())) {
                 System.out.println("Poprawna odpowiedź!");
             } else {
                 System.out.println("Niepoprawna odpowiedź. Poprawna odpowiedź to: " + question.getCorrectAnswer());
@@ -44,9 +44,7 @@ class English extends Language {
         }
     }
 
-    private List<Questions> loadQuestionsFromDatabase() {
-        List<Questions> questions = new ArrayList<>();
-
+    private Question[] loadQuestionsFromDatabase() {
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              Statement questionStatement = connection.createStatement();
              Statement allAnswersStatement = connection.createStatement()) {
@@ -62,39 +60,90 @@ class English extends Language {
             String allAnswersSql = "SELECT answer FROM answers";
             ResultSet allAnswersResultSet = allAnswersStatement.executeQuery(allAnswersSql);
 
-            List<String> allAnswers = new ArrayList<>();
-            while (allAnswersResultSet.next()) {
-                allAnswers.add(allAnswersResultSet.getString("answer"));
-            }
+            // Pobranie wszystkich odpowiedzi do tablicy
+            String[] allAnswers = getAnswersArray(allAnswersResultSet);
 
-            // Przetwarzanie pytań
-            while (questionResultSet.next()) {
+            // Tworzenie pytań
+            Question[] questions = new Question[10]; // Maks. 10 pytań
+            int index = 0;
+
+            while (questionResultSet.next() && index < questions.length) {
                 int questionId = questionResultSet.getInt("id_question");
                 String questionText = questionResultSet.getString("question");
                 String correctAnswer = questionResultSet.getString("answer");
 
-                Questions question = new Questions(questionId, questionText, correctAnswer);
+                // Wybór trzech losowych odpowiedzi
+                String[] randomAnswers = getRandomAnswers(allAnswers, correctAnswer);
 
-                // Tworzenie zestawu odpowiedzi: poprawna + trzy losowe
-                List<String> answersForQuestion = new ArrayList<>(allAnswers);
-                answersForQuestion.remove(correctAnswer); // Usuwamy poprawną odpowiedź z losowych
-                Collections.shuffle(answersForQuestion); // Tasujemy listę
+                // Dodanie poprawnej odpowiedzi do zestawu
+                String[] answers = new String[4];
+                answers[0] = correctAnswer; // Dodanie poprawnej odpowiedzi
+                System.arraycopy(randomAnswers, 0, answers, 1, 3); // Kopiowanie trzech losowych
 
-                // Dodajemy poprawną odpowiedź i trzy losowe do pytania
-                question.addAnswer(correctAnswer);
-                for (int i = 0; i < 3; i++) {
-                    question.addAnswer(answersForQuestion.get(i));
-                }
+                // Losowanie kolejności odpowiedzi
+                shuffleArray(answers);
 
-                // Tasujemy odpowiedzi w pytaniu
-                question.shuffleAnswers();
-                questions.add(question);
+                // Tworzenie pytania
+                questions[index++] = new Question(questionId, questionText, correctAnswer, answers);
             }
+
+            return questions;
 
         } catch (SQLException e) {
             System.err.println("Błąd podczas ładowania pytań z bazy danych: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private String[] getAnswersArray(ResultSet resultSet) throws SQLException {
+        resultSet.last(); // Przejdź na ostatni wiersz, aby policzyć wiersze
+        int size = resultSet.getRow();
+        resultSet.beforeFirst(); // Wróć na początek
+
+        String[] answers = new String[size];
+        int index = 0;
+
+        while (resultSet.next()) {
+            answers[index++] = resultSet.getString("answer");
         }
 
-        return questions;
+        return answers;
+    }
+
+    private String[] getRandomAnswers(String[] allAnswers, String correctAnswer) {
+        Random random = new Random();
+        String[] randomAnswers = new String[3];
+        int count = 0;
+
+        while (count < 3) {
+            int randomIndex = random.nextInt(allAnswers.length);
+            String randomAnswer = allAnswers[randomIndex];
+
+            // Upewnij się, że odpowiedź nie jest poprawna i nie została już wybrana
+            if (!randomAnswer.equals(correctAnswer) && !isAnswerAlreadySelected(randomAnswers, randomAnswer)) {
+                randomAnswers[count++] = randomAnswer;
+            }
+        }
+
+        return randomAnswers;
+    }
+
+    private boolean isAnswerAlreadySelected(String[] selectedAnswers, String answer) {
+        for (String selected : selectedAnswers) {
+            if (selected != null && selected.equals(answer)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void shuffleArray(String[] array) {
+        Random random = new Random();
+        for (int i = array.length - 1; i > 0; i--) {
+            int index = random.nextInt(i + 1);
+            String temp = array[index];
+            array[index] = array[i];
+            array[i] = temp;
+        }
     }
 }
