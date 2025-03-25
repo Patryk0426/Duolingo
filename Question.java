@@ -2,7 +2,7 @@ public class Question {
     private int id;
     private String text;
     private String correctAnswer;
-    private String[] answers; // Tablica z czterema odpowiedziami
+    private String[] answers; //
 
     public Question(int id, String text, String correctAnswer, String[] answers) {
         this.id = id;

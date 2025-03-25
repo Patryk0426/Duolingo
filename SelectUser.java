@@ -62,7 +62,6 @@ public class SelectUser {
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              Statement statement = connection.createStatement()) {
 
-            // Wykonanie zapytania SQL
             int rowsInserted = statement.executeUpdate(sql);
             if (rowsInserted > 0) {
                 System.out.println("Konto zostało pomyślnie utworzone.");
@@ -73,11 +72,6 @@ public class SelectUser {
         }
     }
 
-    /**.
-     *
-     * @param login
-     * @param password
-     */
     public static void loginUser(String login, String password) {
         String sql = "SELECT * FROM users WHERE login = '" + login + "' AND password = '" + password + "'";
 
@@ -86,10 +80,18 @@ public class SelectUser {
              ResultSet result = statement.executeQuery(sql)) {
 
             if (result.next()) {
+                int userId = result.getInt("id_user");
                 String name = result.getString("name");
 
                 System.out.println("Zalogowano pomyślnie!");
                 System.out.println("Witaj, " + name);
+
+                String progressSql = "INSERT INTO user_progress (id_user,e_completed,s_completed,j_completed ) " +
+                        "VALUES (" + userId + ",0,0,0) ";
+
+
+                statement.executeUpdate(progressSql);
+
                 SelectLanguage sl = new SelectLanguage();
                 sl.selectLanguage();
             } else {
@@ -97,9 +99,11 @@ public class SelectUser {
                 select();
             }
 
+
         } catch (SQLException e) {
             System.err.println("Błąd podczas logowania: " + e.getMessage());
         }
     }
-}
+    }
+
 

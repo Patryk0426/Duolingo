@@ -6,34 +6,50 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Scanner;
 
-public class Spanish extends Language {
+public class Japanese extends Language {
 
     private static final String DB_URL = "jdbc:mysql://localhost:3306/duolingo";
     private static final String DB_USER = "root";
     private static final String DB_PASSWORD = "";
 
-    public Spanish() {
-        super("Hiszpański");
+    public Japanese() {
+        super("Japonski");
     }
 
     @Override
+    /**.
+     *
+     */
     public void learn() {
-        System.out.println("Nauka Hiszpańskiego: Zapoznaj się z podstawami gramatyki.");
+        System.out.println("Nauka Japonskiego: Zapoznaj się z podstawami gramatyki.");
         Scanner scanner = new Scanner(System.in);
         int correctAnswers = 0;
         System.out.println("Co byś chciał dzisiaj robic?\n1.Nauczyc sie od podstaw\n2.Uruchomic quiz i przejsc na nastepny etap\n3.Powrocic do wyboru jezyka");
         int choice = scanner.nextInt();
         switch (choice){
             case 1:
-                System.out.println("Hola – Hiszpańskie \"cześć\". Wymowa: /ˈo.la/.\n" +
-                        "Dziękuję – Po polsku \"thank you\". Można też powiedzieć \"Dzięki\" (less formal).\n" +
-                        "Adiós – Hiszpańskie \"do widzenia\" lub \"żegnaj\".\n" +
-                        "Dzień dobry – Oznacza \"good morning\" lub \"good day\" po polsku.\n" +
-                        "¿Cómo estás? – Hiszpańskie \"Jak się masz?\". Odpowiedź: \"Bien, gracias\".\n" +
-                        "Proszę – Może oznaczać \"please\" lub \"you’re welcome\" w zależności od kontekstu.\n" +
-                        "Lo siento – Hiszpańskie \"Przepraszam\" lub \"Współczuję\".\n" +
-                        "Przyjaciel – Znaczy \"friend\" po polsku.\n" +
-                        "Buen provecho – Hiszpańskie \"smacznego\".");
+                System.out.println("O ha yō (おはよう) – Japońskie \"dzień dobry\" (rano).\n" +
+                        "\n" +
+                        "A ri ga tō (ありがとう) – \"Dziękuję\" po japońsku, wersja nieformalna.\n" +
+                        "\n" +
+                        "Ha i (はい) – \"Tak\" po japońsku.\n" +
+                        "\n" +
+                        "Ī e (いいえ) – \"Nie\" po japońsku.\n" +
+                        "\n" +
+                        "O ya su mi (おやすみ) – \"Dobranoc\" po japońsku.\n" +
+                        "\n" +
+                        "I chi (いち) – Oznacza \"jeden\" po japońsku.\n" +
+                        "\n" +
+                        "Su mi ma sen (すみません) – \"Przepraszam\" po japońsku, używane w różnych sytuacjach.\n" +
+                        "\n" +
+                        "Sa yō na ra (さようなら) – Oznacza \"do widzenia\", ale bardziej formalnie.\n" +
+                        "\n" +
+                        "Ne ko (ねこ) – \"Kot\" po japońsku.\n" +
+                        "\n" +
+                        "Mi zu (みず) – \"Woda\" po japońsku.\n" +
+                        "\n" +
+                        "Inu (犬) – \"Pies\" po japońsku.");
+
                 learn();
                 break;
             case 3:
@@ -41,8 +57,9 @@ public class Spanish extends Language {
                 sl.selectLanguage();
                 break;
             case 2:
+
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            String questionQuery = "SELECT * FROM questions WHERE id_stage = 1 AND id_language = 2";
+            String questionQuery = "SELECT * FROM questions WHERE id_stage = 1 AND id_language = 3";
             Statement questionStatement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
             ResultSet questionResultSet = questionStatement.executeQuery(questionQuery);
 
@@ -59,7 +76,7 @@ public class Spanish extends Language {
                     correctAnswer = correctAnswerResultSet.getString("answer");
                 }
 
-                String randomAnswersQuery = "SELECT answer FROM answers WHERE id_question != ? AND id_language = 2 ORDER BY RAND() LIMIT 3";
+                String randomAnswersQuery = "SELECT answer FROM answers WHERE id_question != ? AND id_language = 3 ORDER BY RAND() LIMIT 3";
                 PreparedStatement randomAnswersStatement = connection.prepareStatement(randomAnswersQuery);
                 randomAnswersStatement.setInt(1, questionId);
                 ResultSet randomAnswersResultSet = randomAnswersStatement.executeQuery();
@@ -87,6 +104,7 @@ public class Spanish extends Language {
             if (correctAnswers >= 7) {
                 System.out.println("Gratulacje! Przeszedłeś na etap 2.");
                 learn();
+
             } else {
                 System.out.println("Musisz odpowiedzieć poprawnie na co najmniej 7 pytań, aby przejść na kolejny poziom.");
                 learn();
@@ -95,9 +113,10 @@ public class Spanish extends Language {
         } catch (SQLException e) {
             System.err.println("Błąd podczas nauki angielskiego: " + e.getMessage());
         }
-    }}
+    }
+    }
+
     public String[] getAnswersArray(String correctAnswer, ResultSet randomAnswersResultSet) throws SQLException {
-        // Utwórz tablicę odpowiedzi
         String[] answers = new String[4];
         answers[0] = correctAnswer;
 
@@ -107,9 +126,15 @@ public class Spanish extends Language {
             index++;
         }
 
+        while (index < 4) {
+            answers[index] = "Brak odpowiedzi";
+            index++;
+        }
+
         shuffleArray(answers);
         return answers;
     }
+
     private void shuffleArray(String[] array) {
         for (int i = array.length - 1; i > 0; i--) {
             int j = (int) (Math.random() * (i + 1));
