@@ -69,7 +69,7 @@ public class English extends Language {
                     correctAnswer = correctAnswerResultSet.getString("answer");
                 }
 
-                String randomAnswersQuery = "SELECT answer FROM answers WHERE id_question != ? ORDER BY RAND() LIMIT 3";
+                String randomAnswersQuery = "SELECT answer FROM answers WHERE id_question != ? AND id_language = 1 ORDER BY RAND() LIMIT 3";
                 PreparedStatement randomAnswersStatement = conn.prepareStatement(randomAnswersQuery);
                 randomAnswersStatement.setInt(1, questionId);
                 ResultSet randomAnswersResultSet = randomAnswersStatement.executeQuery();
