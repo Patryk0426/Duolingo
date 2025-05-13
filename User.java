@@ -4,4 +4,6 @@ public class User {
     String login;
     String password;
     UserTypeEnum type;
+    
+    public static User currentUser;
 }
